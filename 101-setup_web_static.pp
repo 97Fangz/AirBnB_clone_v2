@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 class web_server {
   package { 'nginx':
     ensure => installed,
@@ -41,7 +42,7 @@ class web_server {
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
-    add_header X-Served-By $HOSTNAME;
+    add_header X-Served-By \$HOSTNAME;
     root   /var/www/html;
     index  index.html index.htm;
     location /hbnb_static {
@@ -69,3 +70,6 @@ server {
 }
 
 include web_server
+EOF
+
+puppet apply /etc/puppetlabs/code/environments/production/manifests/webserver.pp
