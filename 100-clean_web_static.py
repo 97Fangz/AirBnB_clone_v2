@@ -1,93 +1,47 @@
-#!/usr/bin/python3
-""" Fabfile to distribute an archive to a web server. (deploy)
-Creates and distributes an archive to your web servers
+ #!/usr/bin/python3
 """
-from datetime import datetime
+Fabfile to delete out-of-date archives.
+
+This script deletes out-of-date archives from the web servers. The number of archives
+to keep is determined by the `number` argument passed to the `do_clean` function.
+"""
+
+import os
 from fabric.api import *
-from os import path
 
+# Set the IP addresses of the web servers
 env.hosts = ['54.237.52.200', '34.224.62.212']
-env.user = 'ubuntu'
-
-
-def deploy():
-    """Creates and distributes an archive to web servers."""
-    archive_path = do_pack()
-    if archive_path is None:
-        return False
-    return do_deploy(archive_path)
-
-
-def do_pack():
-    """Creates a gzipped tar archive from the web_static/ content"""
-    try:
-        if not path.exists("versions"):
-            local('mkdir versions')
-        now = datetime.utcnow()
-        ft = now.strftime("%Y%m%d%H%M%S")
-        archive_path = "versions/web_static_{}.tgz".format(ft)
-        local("tar -cvzf {}  web_static/".format(archive_path))
-        return archive_path
-    except Exception as e:
-        print("An exception occurred: {}".format(e))
-        return None
-
-
-def do_deploy(archive_path):
-    """Distributes an archive to a web server.
-    params:
-        archive_path (str): The path of the archive to distribute.
-    Returns:
-        If the file doesn't exist at archive_path or an error occurs - False.
-        Otherwise - True.
-    """
-    if not path.exists(archive_path):
-        return False
-    try:
-        tgz_file = archive_path.split('/')[-1]
-        fname = tgz_file.split('.')[0]
-
-        # Upload the archive to /tmp/ directory on the web server
-        put(archive_path, '/tmp/')
-
-        releases_path = "/data/web_static/releases/{}/".format(fname)
-        run("mkdir -p {}".format(releases_path))
-
-        # uncompress archive and delete .tgz
-        run("sudo tar -xzf /tmp/{} -C {}".format(tgz_file, releases_path))
-        run("sudo rm /tmp/{}".format(tgz_file))
-
-        # Place web_static directory correctly
-        run("sudo mv {}/web_static/* {}".format(releases_path, releases_path))
-        run("sudo rm -rf {}web_static".format(releases_path))
-
-        # Delete the symbolic link /data/web_static/current if it exists
-        run('sudo rm -rf /data/web_static/current')
-
-        # Create a new symbolic link /data/web_static/current
-        run('sudo ln -s {} /data/web_static/current'.format(releases_path))
-        print("New version deployed!")
-        return True
-    except Exception as e:
-        print("An exception occurred: {}".format(e))
-        return False
-
 
 def do_clean(number=0):
-    """Deletes out-of-date archives"""
-    if number == 0 or number == 1:
-        number = 1
-    else:
-        number += 1
+    """Delete out-of-date archives.
 
-    # Delete all unnecessary archives (all archives minus the number to keep) in the versions folder
-    with lcd('versions'):
-        local('ls -1t | tail -n +{} | xargs rm -f'.format(number))
+    Params:
+        number (int): The number of archives to keep.
 
-    # Delete all unnecessary archives (all archives minus the number to keep) in the /data/web_static/releases folder of both of your web servers
-    with cd('/data/web_static/releases/'):
-        run('ls -1t | tail -n +{} | xargs rm -rf'.format(number))
+    If number is 0 or 1, keeps only the most recent archive. If number is 2, keeps
+    the most and second-most recent archives, etc.
+    """
 
-if __name__ == "__main__":
-    do_clean(2)
+    # Ensure that number is an integer
+    number = int(number)
+
+    # If number is 0 or 1, set it to 1
+    number = 1 if number < 2 else number
+
+    # Get a list of all archives and sort them by name
+    archives = sorted(os.listdir("versions"))
+
+    # Remove the `number` most recent archives
+    [archives.pop() for i in range(number)]
+
+    # Delete the archives from the local `versions` folder
+    with lcd("versions"):
+        [local("rm ./{}".format(a)) for a in archives]
+
+    # Delete the archives from the remote servers
+    with cd("/data/web_static/releases"):
+        archives = run("ls -tr").split()
+        archives = [a for a in archives if "web_static_" in a]
+        [archives.pop() for i in range(number)]
+        [run("rm -rf ./{}".format(a)) for a in archives]
 
