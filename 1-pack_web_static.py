@@ -11,7 +11,7 @@ def do_pack():
     try:
         if not os.path.exists("versions"):
             local('mkdir versions')
-        now = datetime.utcnow()
+        now = datetime.now()
         ft = now.strftime("%Y%m%d%H%M%S")
         archive_path = "versions/web_static_{}.tgz".format(ft)
         local("tar -cvzf {}  web_static/".format(archive_path))
