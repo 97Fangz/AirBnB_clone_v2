@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-""" Write a fabric script that generates a .tgz archive
-from the contents of the web_static folder in the AirBnB repo and lists all files"""
+""" A Fabric script that generates a .tgz archive
+from the contents of the web_static folder in the AirBnB repository and lists all files"""
 from datetime import datetime
 from fabric.api import local
 import os
