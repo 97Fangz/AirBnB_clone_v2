@@ -1,20 +1,21 @@
 #!/usr/bin/python3
-""" A Fabric script that generates a .tgz archive
-from the contents of the web_static folder in the AirBnB repository and lists all files"""
+"""A Fabric script that generates a .tgz archive from the contents of the
+web_static folder in the AirBnB repository"""
 from datetime import datetime
 from fabric.api import local
-import os
+from os.path import isdir
 
 
 def do_pack():
-    """Creates a gzipped tar archive from the web_static/ content"""
+    """Generates a tgz archive"""
     try:
-        if not os.path.exists("versions"):
+        if not isdir("versions"):
             local('mkdir versions')
-        now = datetime.utcnow()
-        ft = now.strftime("%Y%m%d%H%M%S")
-        archive_path = "versions/web_static_{}.tgz".format(ft)
-        local("tar -cvzf {}  web_static/".format(archive_path))
+        t = datetime.now()
+        f = "%Y%m%d%H%M%S"
+        archive_filename = 'web_static_{}.tgz'.format(t.strftime(f))
+        archive_path = 'versions/{}'.format(archive_filename)
+        local('tar -cvzf {} web_static'.format(archive_path))
         return archive_path
     except Exception as e:
         print("An exception occurred: {}".format(e))
